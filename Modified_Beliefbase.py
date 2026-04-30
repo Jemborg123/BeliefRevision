@@ -113,3 +113,126 @@ class BeliefBase:
         kb_formulas = [b.p for b in self.base]
 
         return InferenceEngine.entails(kb_formulas, query)
+    
+    def contract_by_formula(self, phi: p):
+        """
+        AGM contraction: remove enough beliefs so that phi is no longer entailed.
+        Uses priority ordering (lower priority = removed first).
+        """
+        # Vacuity: if phi not entailed, nothing to do
+        if not self.is_entailed(phi):
+            return
+        
+        # Find all beliefs that are relevant to entailing phi
+        # Strategy: collect minimal support sets for phi, then remove lowest priority ones
+        
+        # Step 1: Find all beliefs that are in the *justification* of phi
+        supporting_beliefs = self._find_supporting_beliefs(phi)
+        
+        if not supporting_beliefs:
+            # If phi is a tautology or unsupported, remove lowest priority beliefs one by one
+            self._contract_by_removing_lowest_priority_until(phi)
+            return
+        
+        # Step 2: Sort supporting beliefs by priority (lowest first)
+        supporting_beliefs.sort(key=lambda b: b.pri)
+        
+        # Step 3: Remove from lowest priority until phi not entailed
+        removed = []
+        for belief in supporting_beliefs:
+            if belief in self.base:
+                self.contract(belief)  # uses your recursive dependency removal
+                removed.append(belief)
+                if not self.is_entailed(phi):
+                    break
+        
+        return removed
+    
+    def _find_supporting_beliefs(self, phi: p) -> list:
+        """
+        Find beliefs that are relevant to entailing phi.
+        Simplified: any belief that appears in the resolution proof of phi.
+        Returns list of Belief objects.
+        """
+        from inference import InferenceEngine
+        
+        supporting = set()
+        
+        # Get proof trace from entailment check
+        # For now, simple approximation: all beliefs that contain variables in phi
+        # Better: modify InferenceEngine to return which clauses were used
+        
+        phi_vars = self._extract_variables(phi)
+        
+        for belief in self.base:
+            belief_vars = self._extract_variables(belief.p)
+            if belief_vars & phi_vars:  # shares variables with phi
+                supporting.add(belief)
+        
+        return list(supporting)
+    
+    def _extract_variables(self, formula: p) -> set:
+        """Extract all variable names from a formula."""
+        vars_set = set()
+        
+        def collect(f):
+            if f.name:
+                vars_set.add(f.name)
+            if f.left:
+                collect(f.left)
+            if f.right:
+                collect(f.right)
+        
+        collect(formula)
+        return vars_set
+    
+    def _contract_by_removing_lowest_priority_until(self, phi: p):
+        """
+        Fallback: remove lowest priority beliefs one by one until phi not entailed.
+        """
+        sorted_beliefs = sorted(self.base, key=lambda b: b.pri)
+        
+        for belief in sorted_beliefs:
+            if belief in self.base:
+                self.contract(belief)
+                if not self.is_entailed(phi):
+                    break
+    
+    def contract_by_priority(self, phi: p):
+        """
+        Alternative contraction: remove minimal set of lowest-priority beliefs
+        to eliminate entailment of phi.
+        """
+        if not self.is_entailed(phi):
+            return []
+        
+        # Try removing combinations of low-priority beliefs
+        sorted_beliefs = sorted(self.base, key=lambda b: b.pri)
+        
+        # Binary search on how many to remove
+        low, high = 1, len(sorted_beliefs)
+        best_removed = None
+        
+        while low <= high:
+            mid = (low + high) // 2
+            
+            # Test removing first 'mid' lowest priority beliefs
+            test_base = [b for b in self.base if b not in sorted_beliefs[:mid]]
+            temp_base = BeliefBase()
+            temp_base.base = test_base.copy()
+            
+            if not temp_base.is_entailed(phi):
+                # Success, try fewer removals
+                best_removed = sorted_beliefs[:mid]
+                high = mid - 1
+            else:
+                # Need to remove more
+                low = mid + 1
+        
+        # Apply the minimal removal found
+        if best_removed:
+            for belief in best_removed:
+                if belief in self.base:
+                    self.contract(belief)
+        
+        return best_removed or []
