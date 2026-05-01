@@ -95,6 +95,8 @@ class InferenceEngine:
                 new_clause = set(ci) | set(cj)
                 new_clause.remove(literal)
                 new_clause.remove(complement)
+                if InferenceEngine._is_tautology(new_clause):
+                    continue
                 resolvents.add(frozenset(new_clause))
 
         return resolvents
@@ -112,6 +114,7 @@ class InferenceEngine:
         negated_query = query.NOT()
         cnf_neg_query = InferenceEngine.to_cnf(negated_query)
         clauses |= InferenceEngine.extract_clauses(cnf_neg_query)
+        clauses = {c for c in clauses if not InferenceEngine._is_tautology(c)}
 
         new_clauses = set()
 
@@ -133,3 +136,7 @@ class InferenceEngine:
             
             clauses |= new_clauses
 
+    def _is_tautology(clause):
+        names_pos = {n for s, n in clause if s == "POS"}
+        names_neg = {n for s, n in clause if s == "NEG"}
+        return bool(names_pos & names_neg)

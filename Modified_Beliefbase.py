@@ -95,12 +95,7 @@ class BeliefBase:
 
     def revision(self, b: Belief):
         neg_p = b.p.NOT()
-
-        beliefs_to_remove = [belief for belief in self.base if str(belief.p) == str(neg_p)]
-
-        for conflict in beliefs_to_remove:
-            self.contract(conflict)
-        
+        self.contract_by_formula(neg_p)    
         self.extension(b)
 
     def print_base(self):
@@ -147,6 +142,71 @@ class BeliefBase:
                     break
         
         return removed
+    
+    def Cn(self):
+        from inference import InferenceEngine
+
+        var_names = sorted(self._collect_variables())
+        Consequence = BeliefBase()
+
+        if not var_names:
+            return Consequence
+
+        rows = self._all_rows(len(var_names))
+
+        for truth_pattern in self._all_rows(len(rows)):
+            satisfying = [rows[i] for i, t in enumerate(truth_pattern) if t]
+            formula = self._formula_from_models(var_names, satisfying)
+            if formula is None:
+                continue
+            if InferenceEngine.entails([b.p for b in self.base], formula):
+                Consequence.extension(Belief(formula, 0))
+
+        return Consequence
+
+    def _all_rows(self, n):
+        if n == 0:
+            return [()]
+        result = []
+        for i in range(2 ** n):
+            row = tuple(bool((i >> (n - 1 - k)) & 1) for k in range(n))
+            result.append(row)
+        return result
+
+    def _collect_variables(self):
+        out = set()
+        def walk(f):
+            if f is None: return
+            if f.name: out.add(f.name)
+            walk(f.left); walk(f.right)
+        for b in self.base:
+            walk(b.p)
+        return out
+
+    def _formula_from_models(self, var_names, satisfying_rows):
+        if not satisfying_rows:
+            v = p(var_names[0])
+            return v.AND(v.NOT())
+        disjuncts = []
+        for row in satisfying_rows:
+            literals = []
+            for name, val in zip(var_names, row):
+                lit = p(name) if val else p(name).NOT()
+                literals.append(lit)
+            conj = literals[0]
+            for lit in literals[1:]:
+                conj = conj.AND(lit)
+            disjuncts.append(conj)
+        result = disjuncts[0]
+        for d in disjuncts[1:]:
+            result = result.OR(d)
+        return result
+
+    def copy(self):
+        new_B = BeliefBase()
+        for b in self.base:
+            new_B.extension(b)
+        return new_B
     
     def _find_supporting_beliefs(self, phi: p) -> list:
         """
