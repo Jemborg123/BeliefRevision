@@ -96,16 +96,40 @@ class BeliefBase:
 
     def _enforce_entrenchment(self, b: Belief):
         for existing in self.base:
-            if self._is_conjunct_of(existing.p, b.p) and existing.pri < b.pri:
+            if self._is_conjunct_of(existing.p, b.p) and b.pri > existing.pri:
                 b.pri = existing.pri
-            elif self._is_conjunct_of(b.p, existing.p) and b.pri < existing.pri:
+            elif self._is_conjunct_of(b.p, existing.p) and existing.pri > b.pri:
                 existing.pri = b.pri
+        
+        self._enforce_dominance(b)
+
+    def _enforce_dominance(self, b: Belief):
+        if not b.par:
+            return
+        min_parent_pri = min(p.pri for p in b.par)
+        if b.pri > min_parent_pri:
+            b.pri = min_parent_pri
 
     def _is_conjunct_of(self, sub: p, conj: p) -> bool:
-        if conj.op != "AND":
+        if sub is None or conj is None:
             return False
-        return str(sub) == str(conj.left) or str(sub) == str(conj.right) \
-            or self._is_conjunct_of(sub, conj.left) or self._is_conjunct_of(sub, conj.right)
+        if self._formula_equal(sub, conj):
+            return True
+        if conj.op == "AND":
+            return self._is_conjunct_of(sub, conj.left) or self._is_conjunct_of(sub, conj.right)
+        return False
+
+    def _formula_equal(self, f1: p, f2: p) -> bool:
+        if f1 is None or f2 is None:
+            return f1 is f2
+        if f1.name and f2.name:
+            return f1.name == f2.name
+        if f1.op != f2.op:
+            return False
+        if f1.op in ("AND", "OR"):
+            return (self._formula_equal(f1.left, f2.left) and self._formula_equal(f1.right, f2.right)) or \
+                (self._formula_equal(f1.left, f2.right) and self._formula_equal(f1.right, f2.left))
+        return self._formula_equal(f1.left, f2.left) and self._formula_equal(f1.right, f2.right)
 
     def revision(self, b: Belief):
         neg_p = b.p.NOT()
