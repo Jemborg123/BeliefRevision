@@ -1,5 +1,6 @@
 from RationalityPostulatesContractions import *
-from Beliefbase import *
+import RationalityPostulatesRevision as Rev
+from BeliefBase import *
 import unittest
 
 class RationalityPostulatesTest(unittest.TestCase):
@@ -133,6 +134,46 @@ class RationalityPostulatesTest(unittest.TestCase):
         phi = Belief(p("q"), 10)
         psy = Belief(p("r"), 10)
         self.assertTrue(ConjunctiveOverlap(B, phi, psy))
+        
+
+
+    def test_revision_closure(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Closure(B, Belief(p("r"), 10)))
+
+    def test_revision_success_with_unrelated(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Success(B, Belief(p("r"), 10)))
+
+    def test_revision_success_contradicting_existing(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Success(B, Belief(p("p").NOT(), 10)))
+
+    def test_revision_inclusion_with_unrelated(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Inclusion(B, Belief(p("r"), 10)))
+
+    def test_revision_inclusion_contradicting_existing(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Inclusion(B, Belief(p("p").NOT(), 10)))
+
+    def test_revision_vacuity_unrelated(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Vacuity(B, Belief(p("r"), 10)))
+
+    def test_revision_consistency_contradicting_existing(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Consistency(B, Belief(p("p").NOT(), 10)))
+
+    def test_revision_consistency_with_unrelated(self):
+        B, _ = self.SetupBeliefBase()
+        self.assertTrue(Rev.Consistency(B, Belief(p("r"), 10)))
+
+    def test_revision_extensionality_pq_vs_qp(self):
+        B, _ = self.SetupBeliefBase()
+        phi = Belief(p("p").AND(p("q")), 10)
+        psy = Belief(p("q").AND(p("p")), 10)
+        self.assertTrue(Rev.Extensionality(B, phi, psy))
     
 if __name__ == '__main__':
     unittest.main()

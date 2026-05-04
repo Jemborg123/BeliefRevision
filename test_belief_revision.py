@@ -3,23 +3,18 @@ Test suite for Belief Revision Agent
 Tests AGM postulates and contraction/revision operations
 """
 
-from belief_base import p, Belief, BeliefBase
+from BeliefBase import p, Belief, BeliefBase
 from inference import InferenceEngine
 
 def test_contraction_vacuity():
-    """Vacuity: If φ not in belief base, contraction does nothing"""
+    """Vacuity: If φ not entailed, contraction does nothing"""
     print("\n=== Test 1: Vacuity ===")
-    
     A = p(name="A")
-    B = p(name="B")
-    
+    C = p(name="C")  # C is not in the base
     bb = BeliefBase()
     bb.extension(Belief(A, priority=1.0))
-    bb.extension(Belief(B, priority=2.0))
-    
     original_size = len(bb.base)
-    bb.contract_by_formula(A.AND(B))  # Not entailed
-    
+    bb.contract_by_formula(C)  # genuinely not entailed
     assert len(bb.base) == original_size, "Vacuity failed: base changed when φ not entailed"
     print("✓ Vacuity test passed")
 

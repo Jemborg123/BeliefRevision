@@ -1,4 +1,4 @@
-from Beliefbase import *
+from BeliefBase import *
 from inference import InferenceEngine
 
 def Closure(B:BeliefBase,phi:Belief):
