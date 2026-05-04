@@ -1,5 +1,5 @@
 # main.py
-from Modified_Beliefbase import p, Belief, BeliefBase
+from Beliefbase import p, Belief, BeliefBase
 from inference import InferenceEngine
 
 def main():

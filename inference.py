@@ -1,4 +1,4 @@
-from Modified_Beliefbase import p, Belief, BeliefBase
+from Beliefbase import p, Belief, BeliefBase
 
 class InferenceEngine:
 

@@ -1,5 +1,5 @@
 from RationalityPostulatesContractions import *
-from Modified_Beliefbase import *
+from Beliefbase import *
 import unittest
 
 class RationalityPostulatesTest(unittest.TestCase):
