@@ -91,7 +91,21 @@ class BeliefBase:
 
     def extension(self, b: Belief):
         if b not in self.base:
+            self._enforce_entrenchment(b)
             self.base.append(b)
+
+    def _enforce_entrenchment(self, b: Belief):
+        for existing in self.base:
+            if self._is_conjunct_of(existing.p, b.p) and existing.pri < b.pri:
+                b.pri = existing.pri
+            elif self._is_conjunct_of(b.p, existing.p) and b.pri < existing.pri:
+                existing.pri = b.pri
+
+    def _is_conjunct_of(self, sub: p, conj: p) -> bool:
+        if conj.op != "AND":
+            return False
+        return str(sub) == str(conj.left) or str(sub) == str(conj.right) \
+            or self._is_conjunct_of(sub, conj.left) or self._is_conjunct_of(sub, conj.right)
 
     def revision(self, b: Belief):
         neg_p = b.p.NOT()
